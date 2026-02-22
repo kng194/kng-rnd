@@ -15,7 +15,8 @@ import {
   Search,
   ChevronRight,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -25,6 +26,7 @@ import Dashboard from './pages/Dashboard';
 import Materials from './pages/Materials';
 import ProjectDetail from './pages/ProjectDetail';
 import AIAssistant from './components/AIAssistant';
+import CrewPage from './pages/Crew';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -56,6 +58,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/materials', icon: Beaker, label: 'Materials' },
+    { to: '/crew', icon: Users, label: 'Crew R&D' },
     { to: '/inventory', icon: Box, label: 'Inventory' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -149,6 +152,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/materials" element={<Materials />} />
+          <Route path="/crew" element={<CrewPage />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
           <Route path="*" element={<div className="flex items-center justify-center h-[60vh] text-slate-400">Page under development</div>} />
         </Routes>

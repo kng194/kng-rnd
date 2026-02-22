@@ -30,3 +30,15 @@ export interface PrototypeLog {
   notes: string;
   image_url?: string;
 }
+
+export type Position = 'Designer Produk' | 'Interior' | 'Motif' | 'Drafter';
+
+export interface Crew {
+  id: string;
+  name: string;
+  photo_url?: string;
+  phone: string;
+  birth_date: string;
+  join_date: string;
+  position: Position;
+}
