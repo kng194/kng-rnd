@@ -12,7 +12,8 @@ import {
   X,
   Trash2,
   Edit2,
-  Upload
+  Upload,
+  AlertCircle
 } from 'lucide-react';
 import { Crew, Position } from '../types';
 import { supabase } from '../lib/supabase';
@@ -32,6 +33,7 @@ export default function CrewPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCrew, setEditingCrew] = useState<Partial<Crew> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,43 +42,58 @@ export default function CrewPage() {
 
   async function fetchCrews() {
     setIsLoading(true);
-    const { data, error } = await supabase.from('crews').select('*').order('name');
-    if (data) {
-      setCrews(data);
-    } else if (error) {
-      console.error('Error fetching crews:', error);
-      // Fallback mock data if table doesn't exist yet
-      setCrews([
-        {
-          id: '1',
-          name: 'Budi Santoso',
-          phone: '08123456789',
-          birth_date: '1990-05-15',
-          join_date: '2018-03-10',
-          position: 'Designer Produk',
-          photo_url: 'https://picsum.photos/seed/budi/200'
-        },
-        {
-          id: '2',
-          name: 'Siti Rahma',
-          phone: '082233445566',
-          birth_date: '1995-11-20',
-          join_date: '2022-06-01',
-          position: 'Motif',
-          photo_url: 'https://picsum.photos/seed/siti/200'
-        },
-        {
-          id: '3',
-          name: 'Andi Wijaya',
-          phone: '085566778899',
-          birth_date: '1998-01-05',
-          join_date: '2025-01-15',
-          position: 'Drafter',
-          photo_url: 'https://picsum.photos/seed/andi/200'
+    setDbError(null);
+    try {
+      const { data, error } = await supabase.from('crews').select('*').order('name');
+      
+      if (error) {
+        console.warn('Supabase fetch error:', error);
+        if (error.message.includes('relation "crews" does not exist')) {
+          setDbError('Tabel "crews" belum ada di Supabase. Menggunakan data simulasi.');
         }
-      ]);
+      }
+
+      if (data && data.length > 0) {
+        setCrews(data);
+      } else {
+        // Fallback mock data if table is empty or doesn't exist
+        const mockData: Crew[] = [
+          {
+            id: '1',
+            name: 'Budi Santoso',
+            phone: '08123456789',
+            birth_date: '1990-05-15',
+            join_date: '2018-03-10',
+            position: 'Designer Produk',
+            photo_url: 'https://picsum.photos/seed/budi/200'
+          },
+          {
+            id: '2',
+            name: 'Siti Rahma',
+            phone: '082233445566',
+            birth_date: '1995-11-20',
+            join_date: '2022-06-01',
+            position: 'Motif',
+            photo_url: 'https://picsum.photos/seed/siti/200'
+          },
+          {
+            id: '3',
+            name: 'Andi Wijaya',
+            phone: '085566778899',
+            birth_date: '1998-01-05',
+            join_date: '2025-01-15',
+            position: 'Drafter',
+            photo_url: 'https://picsum.photos/seed/andi/200'
+          }
+        ];
+        setCrews(mockData);
+        if (error) console.warn('Supabase fetch error (using mock data):', error);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching crews:', err);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   const getLevel = (joinDate: string) => {
@@ -160,6 +177,13 @@ export default function CrewPage() {
         </button>
       </div>
 
+      {dbError && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center gap-3 text-amber-800 text-sm">
+          <AlertCircle size={18} className="shrink-0" />
+          <p>{dbError}</p>
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
         <input 
@@ -172,71 +196,95 @@ export default function CrewPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCrews.map((crew) => {
-          const level = getLevel(crew.join_date);
-          return (
-            <motion.div 
-              key={crew.id}
-              layout
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all group relative"
-            >
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm animate-pulse">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative group-hover:border-brand-primary transition-colors">
-                  {crew.photo_url ? (
-                    <img src={crew.photo_url} alt={crew.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300">
-                      <User size={32} />
-                    </div>
-                  )}
+                <div className="w-20 h-20 rounded-2xl bg-slate-100" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-100 rounded w-3/4" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">{crew.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider", level.color)}>
-                      {level.label}
-                    </span>
-                    <span className="text-slate-300 text-xs">•</span>
-                    <span className="text-slate-500 text-xs font-medium">{crew.position}</span>
+              </div>
+              <div className="space-y-3 border-t border-slate-100 pt-4">
+                <div className="h-3 bg-slate-100 rounded w-full" />
+                <div className="h-3 bg-slate-100 rounded w-full" />
+                <div className="h-3 bg-slate-100 rounded w-full" />
+              </div>
+            </div>
+          ))
+        ) : filteredCrews.length > 0 ? (
+          filteredCrews.map((crew) => {
+            const level = getLevel(crew.join_date);
+            return (
+              <motion.div 
+                key={crew.id}
+                layout
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all group relative"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 relative group-hover:border-brand-primary transition-colors">
+                    {crew.photo_url ? (
+                      <img src={crew.photo_url} alt={crew.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <User size={32} />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">{crew.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider", level.color)}>
+                        {level.label}
+                      </span>
+                      <span className="text-slate-300 text-xs">•</span>
+                      <span className="text-slate-500 text-xs font-medium">{crew.position}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-3 border-t border-slate-100 pt-4">
-                <div className="flex items-center gap-3 text-slate-600 text-sm">
-                  <Phone size={16} className="text-slate-400" />
-                  {crew.phone}
+                <div className="space-y-3 border-t border-slate-100 pt-4">
+                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                    <Phone size={16} className="text-slate-400" />
+                    {crew.phone}
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                    <Calendar size={16} className="text-slate-400" />
+                    Lahir: {format(parseISO(crew.birth_date), 'dd MMM yyyy')}
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                    <Award size={16} className="text-slate-400" />
+                    Gabung: {format(parseISO(crew.join_date), 'dd MMM yyyy')}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-slate-600 text-sm">
-                  <Calendar size={16} className="text-slate-400" />
-                  Lahir: {format(parseISO(crew.birth_date), 'dd MMM yyyy')}
-                </div>
-                <div className="flex items-center gap-3 text-slate-600 text-sm">
-                  <Award size={16} className="text-slate-400" />
-                  Gabung: {format(parseISO(crew.join_date), 'dd MMM yyyy')}
-                </div>
-              </div>
 
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={() => {
-                    setEditingCrew(crew);
-                    setIsModalOpen(true);
-                  }}
-                  className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-brand-primary hover:text-white transition-colors"
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(crew.id)}
-                  className="p-2 bg-slate-100 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </motion.div>
-          );
-        })}
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => {
+                      setEditingCrew(crew);
+                      setIsModalOpen(true);
+                    }}
+                    className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-brand-primary hover:text-white transition-colors"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(crew.id)}
+                    className="p-2 bg-slate-100 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })
+        ) : (
+          <div className="col-span-full py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+            <User size={48} className="mx-auto text-slate-200 mb-4" />
+            <p className="text-slate-400 font-medium">Tidak ada anggota crew ditemukan.</p>
+          </div>
+        )}
       </div>
 
       {/* Modal Form */}
